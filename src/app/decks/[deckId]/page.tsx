@@ -107,10 +107,12 @@ export default async function DeckPage({ params }: DeckPageProps) {
 
         {/* Action buttons */}
         <div className="flex gap-4 mb-8 justify-end">
-          <Button size="lg" className="flex-1 md:flex-none max-w-xs">
-            <BookOpen className="w-5 h-5 mr-2" />
-            Study Cards
-          </Button>
+          <Link href={`/decks/${deckIdNum}/study`}>
+            <Button size="lg" className="flex-1 md:flex-none max-w-xs" disabled={cards.length === 0}>
+              <BookOpen className="w-5 h-5 mr-2" />
+              Study Cards
+            </Button>
+          </Link>
           <AddCardDialog deckId={deckIdNum} className="flex-1 md:flex-none max-w-xs" />
         </div>
 
