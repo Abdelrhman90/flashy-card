@@ -1,69 +1,42 @@
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
+import { SignInButton, SignUpButton, SignedOut } from "@clerk/nextjs";
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
 
-export default function Home() {
+export default async function Home() {
+  // Redirect logged-in users to dashboard
+  const { userId } = await auth();
+  
+  if (userId) {
+    redirect('/dashboard');
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background font-sans">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-background sm:items-start">
-        <Image
-          className="invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-foreground">
-            To get started, edit the page.tsx file.
+    <div className="flex min-h-[calc(100vh-80px)] items-center justify-center bg-background">
+      <div className="flex flex-col items-center justify-center gap-8 text-center px-4">
+        <div className="space-y-4">
+          <h1 className="text-5xl font-bold tracking-tight text-foreground">
+            Flashy Card App
           </h1>
-          <p className="max-w-md text-lg leading-8 text-muted-foreground">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-foreground hover:underline"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-foreground hover:underline"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-xl text-muted-foreground">
+            Your personal flash card platform
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 text-primary-foreground transition-colors hover:bg-primary/90 md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-border px-5 transition-colors hover:bg-accent hover:text-accent-foreground md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-        <div className="mt-8">
-          <Button>Shadcn Button</Button>
-        </div>
-      </main>
+        
+        <SignedOut>
+          <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
+            <SignUpButton mode="modal">
+              <button className="px-8 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium text-lg">
+                Sign Up
+              </button>
+            </SignUpButton>
+            <SignInButton mode="modal">
+              <button className="px-8 py-3 rounded-lg border border-border hover:bg-accent transition-colors font-medium text-lg">
+                Sign In
+              </button>
+            </SignInButton>
+          </div>
+        </SignedOut>
+      </div>
     </div>
   );
 }

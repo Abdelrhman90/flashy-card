@@ -9,6 +9,7 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -28,14 +29,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider appearance={{ baseTheme: dark }}>
+    <ClerkProvider 
+      appearance={{ baseTheme: dark }}
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
+    >
        <html lang="en" className="dark" suppressHydrationWarning>
    
         <body
           className={`${poppins.variable} antialiased`}
         >
           <header className="flex items-center justify-between p-4 border-b border-border">
-            <h1 className="text-xl font-bold">Flashy Card</h1>
+            <div className="flex items-center gap-6">
+              <a href="/" className="text-xl font-bold hover:text-primary transition-colors">
+                Flashy Card
+              </a>
+              <SignedIn>
+                <nav className="flex items-center gap-4 text-sm">
+                  <a 
+                    href="/dashboard" 
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Dashboard
+                  </a>
+                </nav>
+              </SignedIn>
+            </div>
             <div className="flex items-center gap-4">
               <SignedOut>
                 <SignInButton mode="modal">
@@ -55,6 +74,7 @@ export default function RootLayout({
             </div>
           </header>
           {children}
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>
