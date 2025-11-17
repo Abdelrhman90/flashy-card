@@ -204,3 +204,38 @@ export async function deleteCard(cardId: number, deckId: number) {
   }
 }
 
+export async function deleteDeck(deckId: number) {
+  // 1. Authenticate user
+  const { userId } = await auth();
+  
+  if (!userId) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    // 2. Verify deck ownership
+    const deck = await db
+      .select()
+      .from(decksTable)
+      .where(eq(decksTable.id, deckId))
+      .limit(1);
+
+    if (!deck.length || deck[0].userId !== userId) {
+      return { success: false, error: 'Deck not found or access denied' };
+    }
+
+    // 3. Delete the deck (cascade delete will automatically remove all associated cards)
+    await db
+      .delete(decksTable)
+      .where(eq(decksTable.id, deckId));
+
+    // 4. Revalidate the dashboard page
+    revalidatePath('/dashboard');
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting deck:', error);
+    return { success: false, error: 'Failed to delete deck' };
+  }
+}
+

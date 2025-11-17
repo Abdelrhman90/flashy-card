@@ -3,18 +3,30 @@ import { db } from '@/db';
 import { decksTable, cardsTable } from '@/db/schema';
 import { eq, count } from 'drizzle-orm';
 import Link from 'next/link';
-import { PlusCircle, BookOpen, CreditCard, GraduationCap } from 'lucide-react';
+import { BookOpen, CreditCard, GraduationCap } from 'lucide-react';
 import { redirect } from 'next/navigation';
+import { CreateDeckDialog } from './create-deck-dialog';
 
 export default async function DashboardPage() {
   // 1. Authenticate user
-  const { userId } = await auth();
+  const { userId, has } = await auth();
   
   if (!userId) {
     redirect('/');
   }
 
-  // 2. Fetch user's decks with card counts
+  // 2. Check user's plan features
+  // Check both for the feature and the pro plan as a fallback
+  const hasUnlimitedDecks = has({ feature: 'unlimited_decks' }) || has({ plan: 'pro' });
+  
+  // Debug: Check individual feature flags
+  const hasProPlan = has({ plan: 'pro' });
+  const hasFreePlan = has({ plan: 'free_user' });
+  const hasUnlimitedDecksFeature = has({ feature: 'unlimited_decks' });
+  const hasDeckLimitFeature = has({ feature: '3_deck_limit' });
+  const hasAIFeature = has({ feature: 'ai_generated_cards' });
+
+  // 3. Fetch user's decks with card counts
   const userDecks = await db
     .select({
       id: decksTable.id,
@@ -39,6 +51,9 @@ export default async function DashboardPage() {
   // Calculate statistics
   const totalDecks = userDecks.length;
   const totalCards = userDecks.reduce((sum, deck) => sum + deck.cardCount, 0);
+  
+  // Check if user can create more decks
+  const canCreateDeck = hasUnlimitedDecks || totalDecks < 3;
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-background">
@@ -94,6 +109,35 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        {/* Deck Limit Alert for Free Users */}
+        {!hasUnlimitedDecks && totalDecks >= 2 && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                  {totalDecks === 3 ? (
+                    <>
+                      <span className="font-bold">Deck limit reached</span> - You&apos;ve created {totalDecks}/3 decks on the free plan.
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-bold">Almost at your limit</span> - You&apos;ve created {totalDecks}/3 decks on the free plan.
+                    </>
+                  )}
+                </p>
+                <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
+                  Upgrade to Pro for unlimited decks and AI-powered flashcard generation.
+                </p>
+              </div>
+              <Link href="/pricing">
+                <button className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-md transition-colors">
+                  Upgrade to Pro
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Decks Section */}
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           <div className="p-6 border-b border-border">
@@ -102,15 +146,14 @@ export default async function DashboardPage() {
                 <h2 className="text-2xl font-bold text-foreground">My Decks</h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   View and manage your flashcard collections
+                  {!hasUnlimitedDecks && (
+                    <span className="ml-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+                      ({totalDecks}/3 decks used)
+                    </span>
+                  )}
                 </p>
               </div>
-              <Link
-                href="/dashboard/deck/new"
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
-              >
-                <PlusCircle className="w-5 h-5" />
-                Create Deck
-              </Link>
+              <CreateDeckDialog canCreate={canCreateDeck} isFreePlan={!hasUnlimitedDecks} />
             </div>
           </div>
 
@@ -127,13 +170,7 @@ export default async function DashboardPage() {
                 <p className="text-muted-foreground mb-6">
                   Create your first deck to start learning with flashcards
                 </p>
-                <Link
-                  href="/dashboard/deck/new"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
-                >
-                  <PlusCircle className="w-5 h-5" />
-                  Create Your First Deck
-                </Link>
+                <CreateDeckDialog variant="large" canCreate={canCreateDeck} isFreePlan={!hasUnlimitedDecks} />
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">

@@ -13,6 +13,7 @@ import { AddCardDialog } from './add-card-dialog';
 import { EditDeckDialog } from './edit-deck-dialog';
 import { EditCardDialog } from './edit-card-dialog';
 import { DeleteCardDialog } from './delete-card-dialog';
+import { DeleteDeckDialog } from './delete-deck-dialog';
 
 interface DeckPageProps {
   params: Promise<{
@@ -78,6 +79,11 @@ export default async function DeckPage({ params }: DeckPageProps) {
                   deckId={deckIdNum} 
                   currentName={deckData.name} 
                   currentDescription={deckData.description} 
+                />
+                <DeleteDeckDialog 
+                  deckId={deckIdNum} 
+                  deckName={deckData.name} 
+                  cardCount={cards.length} 
                 />
               </div>
               {deckData.description && (

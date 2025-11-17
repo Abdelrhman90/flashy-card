@@ -38,6 +38,7 @@ export default function RootLayout({
    
         <body
           className={`${poppins.variable} antialiased`}
+          suppressHydrationWarning
         >
           <header className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-6">
