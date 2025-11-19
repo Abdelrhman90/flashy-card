@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
+import Link from "next/link";
 import {
   ClerkProvider,
   SignInButton,
@@ -42,17 +43,17 @@ export default function RootLayout({
         >
           <header className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center gap-6">
-              <a href="/" className="text-xl font-bold hover:text-primary transition-colors">
+              <Link href="/" className="text-xl font-bold hover:text-primary transition-colors">
                 Flashy Card
-              </a>
+              </Link>
               <SignedIn>
                 <nav className="flex items-center gap-4 text-sm">
-                  <a 
+                  <Link 
                     href="/dashboard" 
                     className="text-muted-foreground hover:text-foreground transition-colors"
                   >
                     Dashboard
-                  </a>
+                  </Link>
                 </nav>
               </SignedIn>
             </div>

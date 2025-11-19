@@ -1,7 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/db';
-import { decksTable, cardsTable } from '@/db/schema';
-import { eq, count } from 'drizzle-orm';
+import { getUserDecksWithCardCounts } from '@/db/queries';
 import Link from 'next/link';
 import { BookOpen, CreditCard, GraduationCap } from 'lucide-react';
 import { redirect } from 'next/navigation';
@@ -18,35 +16,9 @@ export default async function DashboardPage() {
   // 2. Check user's plan features
   // Check both for the feature and the pro plan as a fallback
   const hasUnlimitedDecks = has({ feature: 'unlimited_decks' }) || has({ plan: 'pro' });
-  
-  // Debug: Check individual feature flags
-  const hasProPlan = has({ plan: 'pro' });
-  const hasFreePlan = has({ plan: 'free_user' });
-  const hasUnlimitedDecksFeature = has({ feature: 'unlimited_decks' });
-  const hasDeckLimitFeature = has({ feature: '3_deck_limit' });
-  const hasAIFeature = has({ feature: 'ai_generated_cards' });
 
-  // 3. Fetch user's decks with card counts
-  const userDecks = await db
-    .select({
-      id: decksTable.id,
-      name: decksTable.name,
-      description: decksTable.description,
-      createdAt: decksTable.createdAt,
-      updatedAt: decksTable.updatedAt,
-      cardCount: count(cardsTable.id),
-    })
-    .from(decksTable)
-    .leftJoin(cardsTable, eq(decksTable.id, cardsTable.deckId))
-    .where(eq(decksTable.userId, userId))
-    .groupBy(
-      decksTable.id,
-      decksTable.name,
-      decksTable.description,
-      decksTable.createdAt,
-      decksTable.updatedAt
-    )
-    .orderBy(decksTable.updatedAt);
+  // 3. Fetch user's decks with card counts using query function
+  const userDecks = await getUserDecksWithCardCounts(userId);
 
   // Calculate statistics
   const totalDecks = userDecks.length;
@@ -153,7 +125,7 @@ export default async function DashboardPage() {
                   )}
                 </p>
               </div>
-              <CreateDeckDialog canCreate={canCreateDeck} isFreePlan={!hasUnlimitedDecks} />
+              <CreateDeckDialog canCreate={canCreateDeck} />
             </div>
           </div>
 
@@ -170,7 +142,7 @@ export default async function DashboardPage() {
                 <p className="text-muted-foreground mb-6">
                   Create your first deck to start learning with flashcards
                 </p>
-                <CreateDeckDialog variant="large" canCreate={canCreateDeck} isFreePlan={!hasUnlimitedDecks} />
+                <CreateDeckDialog variant="large" canCreate={canCreateDeck} />
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">

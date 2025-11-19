@@ -37,7 +37,12 @@ export function EditCardDialog({ cardId, deckId, currentFront, currentBack }: Ed
     setIsSubmitting(true);
 
     try {
-      const result = await editCard(cardId, deckId, front, back);
+      const result = await editCard({
+        cardId,
+        deckId,
+        front,
+        back,
+      });
 
       if (result.success) {
         setOpen(false);
@@ -52,7 +57,7 @@ export function EditCardDialog({ cardId, deckId, currentFront, currentBack }: Ed
           description: errorMessage,
         });
       }
-    } catch (err) {
+    } catch {
       const errorMessage = 'An unexpected error occurred';
       setError(errorMessage);
       toast.error('Error', {

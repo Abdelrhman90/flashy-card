@@ -37,7 +37,11 @@ export function EditDeckDialog({ deckId, currentName, currentDescription }: Edit
     setIsSubmitting(true);
 
     try {
-      const result = await editDeck(deckId, name, description);
+      const result = await editDeck({
+        deckId,
+        name,
+        description,
+      });
 
       if (result.success) {
         setOpen(false);
@@ -52,7 +56,7 @@ export function EditDeckDialog({ deckId, currentName, currentDescription }: Edit
           description: errorMessage,
         });
       }
-    } catch (err) {
+    } catch {
       const errorMessage = 'An unexpected error occurred';
       setError(errorMessage);
       toast.error('Error', {
@@ -140,5 +144,6 @@ export function EditDeckDialog({ deckId, currentName, currentDescription }: Edit
     </Dialog>
   );
 }
+
 
 

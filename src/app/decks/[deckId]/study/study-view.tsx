@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, RotateCw, CheckCircle2, XCircle, Check, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCw, CheckCircle2, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -167,7 +167,7 @@ export function StudyView({ deck, cards }: StudyViewProps) {
                   </p>
                 ) : scorePercentage >= 80 ? (
                   <p className="text-lg text-foreground">
-                    Great job! You're mastering this deck!
+                    Great job! You&apos;re mastering this deck!
                   </p>
                 ) : scorePercentage >= 60 ? (
                   <p className="text-lg text-foreground">

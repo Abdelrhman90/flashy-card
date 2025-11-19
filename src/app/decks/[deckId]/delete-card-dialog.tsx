@@ -35,7 +35,10 @@ export function DeleteCardDialog({ cardId, deckId, cardFront, buttonProps }: Del
   const handleDelete = async () => {
     setIsDeleting(true);
     
-    const result = await deleteCard(cardId, deckId);
+    const result = await deleteCard({
+      cardId,
+      deckId,
+    });
     
     if (result.success) {
       toast.success('Card deleted successfully');

@@ -22,13 +22,11 @@ import { createDeck } from './actions';
 interface CreateDeckDialogProps {
   variant?: 'default' | 'large';
   canCreate?: boolean;
-  isFreePlan?: boolean;
 }
 
 export function CreateDeckDialog({ 
   variant = 'default', 
-  canCreate = true, 
-  isFreePlan = false 
+  canCreate = true
 }: CreateDeckDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +41,10 @@ export function CreateDeckDialog({
     setLimitReached(false);
 
     const formData = new FormData(event.currentTarget);
-    const result = await createDeck(formData);
+    const result = await createDeck({
+      name: formData.get('name') as string,
+      description: formData.get('description') as string,
+    });
 
     if (result.error) {
       setError(result.error);

@@ -1,12 +1,28 @@
 'use server';
 
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/db';
-import { decksTable, cardsTable } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
+import {
+  getDeckByIdForUser,
+  insertCard,
+  updateDeckById,
+  updateCardById,
+  getCardByIdForDeck,
+  deleteCardById,
+  deleteDeckById,
+} from '@/db/queries';
 
-export async function addCard(deckId: number, front: string, back: string) {
+// Define Zod schemas for validation
+const addCardSchema = z.object({
+  deckId: z.number().positive(),
+  front: z.string().min(1, 'Front content is required').max(1000, 'Front content must be less than 1000 characters').trim(),
+  back: z.string().min(1, 'Back content is required').max(1000, 'Back content must be less than 1000 characters').trim(),
+});
+
+type AddCardInput = z.infer<typeof addCardSchema>;
+
+export async function addCard(input: AddCardInput) {
   // 1. Authenticate user
   const { userId } = await auth();
   
@@ -14,32 +30,30 @@ export async function addCard(deckId: number, front: string, back: string) {
     return { success: false, error: 'Unauthorized' };
   }
 
-  // 2. Validate input
-  if (!front || !back) {
-    return { success: false, error: 'Both front and back content are required' };
+  // 2. Validate input with Zod
+  const validation = addCardSchema.safeParse(input);
+  if (!validation.success) {
+    return { 
+      success: false, 
+      error: validation.error.issues[0].message 
+    };
   }
 
-  if (front.trim().length === 0 || back.trim().length === 0) {
-    return { success: false, error: 'Card content cannot be empty' };
-  }
+  const { deckId, front, back } = validation.data;
 
   try {
-    // 3. Verify deck ownership
-    const deck = await db
-      .select()
-      .from(decksTable)
-      .where(eq(decksTable.id, deckId))
-      .limit(1);
+    // 3. Verify deck ownership using query function
+    const deck = await getDeckByIdForUser(deckId, userId);
 
-    if (!deck.length || deck[0].userId !== userId) {
+    if (!deck) {
       return { success: false, error: 'Deck not found or access denied' };
     }
 
-    // 4. Insert the new card
-    await db.insert(cardsTable).values({
+    // 4. Insert the new card using mutation function
+    await insertCard({
       deckId,
-      front: front.trim(),
-      back: back.trim(),
+      front,
+      back,
     });
 
     // 5. Revalidate the page to show the new card
@@ -52,7 +66,15 @@ export async function addCard(deckId: number, front: string, back: string) {
   }
 }
 
-export async function editDeck(deckId: number, name: string, description: string) {
+const editDeckSchema = z.object({
+  deckId: z.number().positive(),
+  name: z.string().min(1, 'Deck name is required').max(255, 'Deck name must be less than 255 characters').trim(),
+  description: z.string().max(1000, 'Description must be less than 1000 characters').trim().optional(),
+});
+
+type EditDeckInput = z.infer<typeof editDeckSchema>;
+
+export async function editDeck(input: EditDeckInput) {
   // 1. Authenticate user
   const { userId } = await auth();
   
@@ -60,32 +82,30 @@ export async function editDeck(deckId: number, name: string, description: string
     return { success: false, error: 'Unauthorized' };
   }
 
-  // 2. Validate input
-  if (!name || name.trim().length === 0) {
-    return { success: false, error: 'Deck name is required' };
+  // 2. Validate input with Zod
+  const validation = editDeckSchema.safeParse(input);
+  if (!validation.success) {
+    return { 
+      success: false, 
+      error: validation.error.issues[0].message 
+    };
   }
 
-  try {
-    // 3. Verify deck ownership
-    const deck = await db
-      .select()
-      .from(decksTable)
-      .where(eq(decksTable.id, deckId))
-      .limit(1);
+  const { deckId, name, description } = validation.data;
 
-    if (!deck.length || deck[0].userId !== userId) {
+  try {
+    // 3. Verify deck ownership using query function
+    const deck = await getDeckByIdForUser(deckId, userId);
+
+    if (!deck) {
       return { success: false, error: 'Deck not found or access denied' };
     }
 
-    // 4. Update the deck
-    await db
-      .update(decksTable)
-      .set({
-        name: name.trim(),
-        description: description.trim() || null,
-        updatedAt: new Date(),
-      })
-      .where(eq(decksTable.id, deckId));
+    // 4. Update the deck using mutation function
+    await updateDeckById(deckId, {
+      name,
+      description: description || null,
+    });
 
     // 5. Revalidate the page to show the updated deck
     revalidatePath(`/decks/${deckId}`);
@@ -98,7 +118,16 @@ export async function editDeck(deckId: number, name: string, description: string
   }
 }
 
-export async function editCard(cardId: number, deckId: number, front: string, back: string) {
+const editCardSchema = z.object({
+  cardId: z.number().positive(),
+  deckId: z.number().positive(),
+  front: z.string().min(1, 'Front content is required').max(1000, 'Front content must be less than 1000 characters').trim(),
+  back: z.string().min(1, 'Back content is required').max(1000, 'Back content must be less than 1000 characters').trim(),
+});
+
+type EditCardInput = z.infer<typeof editCardSchema>;
+
+export async function editCard(input: EditCardInput) {
   // 1. Authenticate user
   const { userId } = await auth();
   
@@ -106,47 +135,37 @@ export async function editCard(cardId: number, deckId: number, front: string, ba
     return { success: false, error: 'Unauthorized' };
   }
 
-  // 2. Validate input
-  if (!front || !back) {
-    return { success: false, error: 'Both front and back content are required' };
+  // 2. Validate input with Zod
+  const validation = editCardSchema.safeParse(input);
+  if (!validation.success) {
+    return { 
+      success: false, 
+      error: validation.error.issues[0].message 
+    };
   }
 
-  if (front.trim().length === 0 || back.trim().length === 0) {
-    return { success: false, error: 'Card content cannot be empty' };
-  }
+  const { cardId, deckId, front, back } = validation.data;
 
   try {
-    // 3. Verify deck ownership
-    const deck = await db
-      .select()
-      .from(decksTable)
-      .where(eq(decksTable.id, deckId))
-      .limit(1);
+    // 3. Verify deck ownership using query function
+    const deck = await getDeckByIdForUser(deckId, userId);
 
-    if (!deck.length || deck[0].userId !== userId) {
+    if (!deck) {
       return { success: false, error: 'Deck not found or access denied' };
     }
 
-    // 4. Verify card belongs to the deck
-    const card = await db
-      .select()
-      .from(cardsTable)
-      .where(eq(cardsTable.id, cardId))
-      .limit(1);
+    // 4. Verify card belongs to the deck using query function
+    const card = await getCardByIdForDeck(cardId, deckId);
 
-    if (!card.length || card[0].deckId !== deckId) {
+    if (!card) {
       return { success: false, error: 'Card not found or does not belong to this deck' };
     }
 
-    // 5. Update the card
-    await db
-      .update(cardsTable)
-      .set({
-        front: front.trim(),
-        back: back.trim(),
-        updatedAt: new Date(),
-      })
-      .where(eq(cardsTable.id, cardId));
+    // 5. Update the card using mutation function
+    await updateCardById(cardId, {
+      front,
+      back,
+    });
 
     // 6. Revalidate the page to show the updated card
     revalidatePath(`/decks/${deckId}`);
@@ -158,7 +177,14 @@ export async function editCard(cardId: number, deckId: number, front: string, ba
   }
 }
 
-export async function deleteCard(cardId: number, deckId: number) {
+const deleteCardSchema = z.object({
+  cardId: z.number().positive(),
+  deckId: z.number().positive(),
+});
+
+type DeleteCardInput = z.infer<typeof deleteCardSchema>;
+
+export async function deleteCard(input: DeleteCardInput) {
   // 1. Authenticate user
   const { userId } = await auth();
   
@@ -166,35 +192,36 @@ export async function deleteCard(cardId: number, deckId: number) {
     return { success: false, error: 'Unauthorized' };
   }
 
-  try {
-    // 2. Verify deck ownership
-    const deck = await db
-      .select()
-      .from(decksTable)
-      .where(eq(decksTable.id, deckId))
-      .limit(1);
+  // 2. Validate input with Zod
+  const validation = deleteCardSchema.safeParse(input);
+  if (!validation.success) {
+    return { 
+      success: false, 
+      error: 'Invalid input' 
+    };
+  }
 
-    if (!deck.length || deck[0].userId !== userId) {
+  const { cardId, deckId } = validation.data;
+
+  try {
+    // 3. Verify deck ownership using query function
+    const deck = await getDeckByIdForUser(deckId, userId);
+
+    if (!deck) {
       return { success: false, error: 'Deck not found or access denied' };
     }
 
-    // 3. Verify card belongs to the deck
-    const card = await db
-      .select()
-      .from(cardsTable)
-      .where(eq(cardsTable.id, cardId))
-      .limit(1);
+    // 4. Verify card belongs to the deck using query function
+    const card = await getCardByIdForDeck(cardId, deckId);
 
-    if (!card.length || card[0].deckId !== deckId) {
+    if (!card) {
       return { success: false, error: 'Card not found or does not belong to this deck' };
     }
 
-    // 4. Delete the card
-    await db
-      .delete(cardsTable)
-      .where(eq(cardsTable.id, cardId));
+    // 5. Delete the card using mutation function
+    await deleteCardById(cardId);
 
-    // 5. Revalidate the page to show the changes
+    // 6. Revalidate the page to show the changes
     revalidatePath(`/decks/${deckId}`);
 
     return { success: true };
@@ -204,7 +231,13 @@ export async function deleteCard(cardId: number, deckId: number) {
   }
 }
 
-export async function deleteDeck(deckId: number) {
+const deleteDeckSchema = z.object({
+  deckId: z.number().positive(),
+});
+
+type DeleteDeckInput = z.infer<typeof deleteDeckSchema>;
+
+export async function deleteDeck(input: DeleteDeckInput) {
   // 1. Authenticate user
   const { userId } = await auth();
   
@@ -212,24 +245,29 @@ export async function deleteDeck(deckId: number) {
     return { success: false, error: 'Unauthorized' };
   }
 
-  try {
-    // 2. Verify deck ownership
-    const deck = await db
-      .select()
-      .from(decksTable)
-      .where(eq(decksTable.id, deckId))
-      .limit(1);
+  // 2. Validate input with Zod
+  const validation = deleteDeckSchema.safeParse(input);
+  if (!validation.success) {
+    return { 
+      success: false, 
+      error: 'Invalid input' 
+    };
+  }
 
-    if (!deck.length || deck[0].userId !== userId) {
+  const { deckId } = validation.data;
+
+  try {
+    // 3. Verify deck ownership using query function
+    const deck = await getDeckByIdForUser(deckId, userId);
+
+    if (!deck) {
       return { success: false, error: 'Deck not found or access denied' };
     }
 
-    // 3. Delete the deck (cascade delete will automatically remove all associated cards)
-    await db
-      .delete(decksTable)
-      .where(eq(decksTable.id, deckId));
+    // 4. Delete the deck using mutation function (cascade delete will automatically remove all associated cards)
+    await deleteDeckById(deckId);
 
-    // 4. Revalidate the dashboard page
+    // 5. Revalidate the dashboard page
     revalidatePath('/dashboard');
 
     return { success: true };

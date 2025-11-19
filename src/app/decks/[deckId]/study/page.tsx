@@ -1,7 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/db';
-import { decksTable, cardsTable } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { getDeckByIdForUser, getCardsByDeckId } from '@/db/queries';
 import { notFound, redirect } from 'next/navigation';
 import { StudyView } from './study-view';
 
@@ -27,29 +25,20 @@ export default async function StudyPage({ params }: StudyPageProps) {
     notFound();
   }
 
-  // 3. Fetch deck and verify ownership
-  const deck = await db
-    .select()
-    .from(decksTable)
-    .where(eq(decksTable.id, deckIdNum))
-    .limit(1);
+  // 3. Fetch deck and verify ownership using query function
+  const deckData = await getDeckByIdForUser(deckIdNum, userId);
 
-  if (!deck.length || deck[0].userId !== userId) {
+  if (!deckData) {
     notFound();
   }
 
-  // 4. Fetch all cards for this deck
-  const cards = await db
-    .select()
-    .from(cardsTable)
-    .where(eq(cardsTable.deckId, deckIdNum));
+  // 4. Fetch all cards for this deck using query function
+  const cards = await getCardsByDeckId(deckIdNum);
 
   // 5. Redirect back if no cards
   if (cards.length === 0) {
     redirect(`/decks/${deckIdNum}`);
   }
-
-  const deckData = deck[0];
 
   return <StudyView deck={deckData} cards={cards} />;
 }

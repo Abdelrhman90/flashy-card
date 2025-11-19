@@ -1,7 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/db';
-import { decksTable, cardsTable } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { getDeckByIdForUser, getCardsByDeckId } from '@/db/queries';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, CreditCard, Calendar, FileText } from 'lucide-react';
@@ -14,6 +12,7 @@ import { EditDeckDialog } from './edit-deck-dialog';
 import { EditCardDialog } from './edit-card-dialog';
 import { DeleteCardDialog } from './delete-card-dialog';
 import { DeleteDeckDialog } from './delete-deck-dialog';
+import { GenerateCardsButton } from './generate-cards-button';
 
 interface DeckPageProps {
   params: Promise<{
@@ -37,25 +36,15 @@ export default async function DeckPage({ params }: DeckPageProps) {
     notFound();
   }
 
-  // 3. Fetch deck and verify ownership
-  const deck = await db
-    .select()
-    .from(decksTable)
-    .where(eq(decksTable.id, deckIdNum))
-    .limit(1);
+  // 3. Fetch deck and verify ownership using query function
+  const deckData = await getDeckByIdForUser(deckIdNum, userId);
 
-  if (!deck.length || deck[0].userId !== userId) {
+  if (!deckData) {
     notFound();
   }
 
-  // 4. Fetch all cards for this deck
-  const cards = await db
-    .select()
-    .from(cardsTable)
-    .where(eq(cardsTable.deckId, deckIdNum))
-    .orderBy(desc(cardsTable.updatedAt));
-
-  const deckData = deck[0];
+  // 4. Fetch all cards for this deck using query function
+  const cards = await getCardsByDeckId(deckIdNum);
 
   return (
     <div className="min-h-[calc(100vh-80px)] bg-background">
@@ -111,16 +100,23 @@ export default async function DeckPage({ params }: DeckPageProps) {
 
         <Separator className="mb-8" />
 
-        {/* Action buttons */}
-        <div className="flex gap-4 mb-8 justify-end">
-          <Link href={`/decks/${deckIdNum}/study`}>
-            <Button size="lg" className="flex-1 md:flex-none max-w-xs" disabled={cards.length === 0}>
-              <BookOpen className="w-5 h-5 mr-2" />
-              Study Cards
-            </Button>
-          </Link>
-          <AddCardDialog deckId={deckIdNum} className="flex-1 md:flex-none max-w-xs" />
-        </div>
+        {/* Action buttons - only show when there are cards */}
+        {cards.length > 0 && (
+          <div className="flex gap-4 mb-8 justify-end flex-wrap">
+            <Link href={`/decks/${deckIdNum}/study`}>
+              <Button size="lg" className="flex-1 md:flex-none max-w-xs">
+                <BookOpen className="w-5 h-5 mr-2" />
+                Study Cards
+              </Button>
+            </Link>
+            <GenerateCardsButton 
+              deckId={deckIdNum} 
+              hasDescription={!!deckData.description && deckData.description.trim().length > 0}
+              className="flex-1 md:flex-none max-w-xs" 
+            />
+            <AddCardDialog deckId={deckIdNum} className="flex-1 md:flex-none max-w-xs" />
+          </div>
+        )}
 
         {/* Cards section */}
         <div>
@@ -140,7 +136,13 @@ export default async function DeckPage({ params }: DeckPageProps) {
                 <p className="text-muted-foreground mb-6">
                   Add your first flashcard to start learning
                 </p>
-                <AddCardDialog deckId={deckIdNum} variant="default" size="default" />
+                <div className="flex gap-3 justify-center flex-wrap">
+                  <GenerateCardsButton 
+                    deckId={deckIdNum} 
+                    hasDescription={!!deckData.description && deckData.description.trim().length > 0}
+                  />
+                  <AddCardDialog deckId={deckIdNum} variant="outline" size="lg" />
+                </div>
               </CardContent>
             </Card>
           ) : (

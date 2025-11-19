@@ -3,12 +3,12 @@
 
 import 'dotenv/config';
 import { db } from './index';
-import { eq } from 'drizzle-orm';
+import { eq, type InferInsertModel } from 'drizzle-orm';
 import { decksTable, cardsTable } from './schema';
 
 async function main() {
   // Create a new deck for learning Indonesian
-  const newDeck: typeof decksTable.$inferInsert = {
+  const newDeck: InferInsertModel<typeof decksTable> = {
     userId: 'user_example123', // This would be a real Clerk user ID in production
     name: 'Indonesian Language',
     description: 'Learn Indonesian vocabulary from English',
@@ -18,7 +18,7 @@ async function main() {
   console.log('✅ New deck created!', createdDeck);
 
   // Create cards for the deck
-  const newCards: typeof cardsTable.$inferInsert[] = [
+  const newCards: InferInsertModel<typeof cardsTable>[] = [
     {
       deckId: createdDeck.id,
       front: 'Dog',

@@ -32,7 +32,9 @@ export function DeleteDeckDialog({ deckId, deckName, cardCount }: DeleteDeckDial
   const handleDelete = async () => {
     setIsDeleting(true);
     
-    const result = await deleteDeck(deckId);
+    const result = await deleteDeck({
+      deckId,
+    });
     
     if (result.success) {
       toast.success('Deck deleted successfully', {
@@ -80,4 +82,5 @@ export function DeleteDeckDialog({ deckId, deckName, cardCount }: DeleteDeckDial
     </AlertDialog>
   );
 }
+
 

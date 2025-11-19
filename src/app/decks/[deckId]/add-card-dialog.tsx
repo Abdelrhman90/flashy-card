@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { addCard } from './actions';
@@ -38,7 +37,11 @@ export function AddCardDialog({ deckId, variant = 'outline', size = 'lg', classN
     setIsSubmitting(true);
 
     try {
-      const result = await addCard(deckId, front, back);
+      const result = await addCard({
+        deckId,
+        front,
+        back,
+      });
 
       if (result.success) {
         // Reset form and close dialog
@@ -56,7 +59,7 @@ export function AddCardDialog({ deckId, variant = 'outline', size = 'lg', classN
           description: errorMessage,
         });
       }
-    } catch (err) {
+    } catch {
       const errorMessage = 'An unexpected error occurred';
       setError(errorMessage);
       toast.error('Error', {
